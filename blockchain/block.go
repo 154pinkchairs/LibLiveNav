@@ -1,7 +1,7 @@
 package blockchain
 
 import (
-  "github.com/154pinchairs/LibLiveNav/blockchain"
+  "github.com/154pinkchairs/LibLiveNav/blockchain"
   )
 
 type Block struct {
