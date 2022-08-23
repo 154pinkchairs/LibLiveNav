@@ -1,6 +1,7 @@
 package main
 
 import (
+  "fmt"
   "bytes"
   "crypto/sha512"
 )
@@ -22,7 +23,7 @@ func (b *Block) DeriveHash() {
 }
 
 func CreateBlock(data string, prevHash []byte) *Block {
-  block := &{[]byte{}, []byte(data), prevHash}
+  block := &Block{[]byte{}, []byte(data), prevHash}
   block.DeriveHash()
   return block
 }
