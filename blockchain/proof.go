@@ -1,37 +1,84 @@
 package blockchain
 
 import (
-  "github.com/consensys/gnark"
+"bytes"
+"encoding/binary"
+"log"
+"math/big"
+"fmt"
+"crypto/sha512"
 )
 
-// Circuit defines a pre-image knowledge proof
-// mimc(secret preImage) = public hash
-type Circuit struct {
-    PreImage frontend.Variable
-    Hash     frontend.Variable `gnark:",public"`
+const Difficulty = 6
+
+type ProofOfWork struct {
+  Block *Block
+  Target *big.Int
 }
 
-// Define declares the circuit's constraints
-func (circuit *Circuit) Define(api frontend.API) error {
-    // hash function
-    mimc, err := mimc.NewMiMC(api.Curve())
+func NewProof(b *Block) *ProofOfWork {
+  target := big.NewInt(1)
+  target.Lsh(target, uint(256-Difficulty))
 
-    // specify constraints
-    // mimc(preImage) == hash
-    api.AssertIsEqual(circuit.Hash, mimc.Hash(cs, circuit.PreImage))
+  pow := &ProofOfWork{b, target}
 
-    return nil
+  return pow
 }
 
-var mimcCircuit Circuit
-r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &mimcCircuit)
-
-assignment := &Circuit{
-    Hash: b.Hash,
-    PreImage: 35,
+func (pow *ProofOfWork) InitData(nonce int) []byte {
+  data := bytes.Join(
+    [][]byte{
+      pow.Block.PrevHash,
+      pow.Block.Data,
+      ToHex(int64(nonce)),
+      ToHex(int64(Difficulty)),
+    },
+    []byte{},
+    )
+    return data
 }
-witness, _ := frontend.NewWitness(assignment, ecc.BN254)
-publicWitness, _ := witness.Public()
-pk, vk, err := groth16.Setup(r1cs)
-proof, err := groth16.Prove(r1cs, pk, witness)
-err := groth16.Verify(proof, vk, publicWitness)
+
+func (pow *ProofOfWork) Run() (int, []byte){
+  var intHash big.Int
+  var hash [32]byte
+
+  nonce := 0
+
+  for nonce < math.MaxInt64 {
+    data := pow.InitData(nonce)
+    hash = sha512.Sum512(data)
+
+    fmt.Printf("\r%x", hash)
+    intHash.SetBytes(hash[:])
+
+    if intHash.Cmp(pow.Target) == -1 {
+      break
+    } else {
+      nonce++
+    }
+  }
+  fmt.Println()
+
+  return nonce, hash[:]
+}
+
+func (pow *ProofOfWork) Validate() bool {
+  var intHash big.Int
+
+  data := pow.InitData(pow.Block.Nonce)
+
+  hash := sha512.Sum512(data)
+  intHash.SetBytes(hash[:])
+
+  return intHash.Cmp(pow.Target) == -1
+}
+
+func ToHex(num int64) []byte {
+buff := new(bytes.Buffer)
+err := binary.Write(buff, binary.BigEndian, num)
+if err != nil {
+  log.Panic(err)
+}
+
+return  buff.Bytes()
+}
