@@ -1,37 +1,29 @@
 package blockchain
 
 import (
-  "github.com/consensys/gnark"
+	"github.com/consensys/gnark"
 )
 
-// Circuit defines a pre-image knowledge proof
-// mimc(secret preImage) = public hash
-type Circuit struct {
-    PreImage frontend.Variable
-    Hash     frontend.Variable `gnark:",public"`
+//Implement a basic zero knowledge proof for the blockchain
+func Proof(pk *gnark.PublicKey, sk *gnark.SecretKey, inputs []*gnark.Variable, outputs []*gnark.Variable) *gnark.Proof {
+	// Create a new proof
+	proof := gnark.NewProof()
+	// Create a new circuit
+	circuit := gnark.NewCircuit()
+	// Add the circuit to the proof
+	proof.AddCircuit(circuit)
+	// Add the public key to the circuit
+	circuit.AddPublicKey(pk)
+	// Add the secret key to the circuit
+	circuit.AddSecretKey(sk)
+	// Add the inputs to the circuit
+	circuit.AddInputs(inputs)
+	// Add the outputs to the circuit
+	circuit.AddOutputs(outputs)
+	// Add the constraints to the circuit
+	circuit.AddConstraints()
+	// Add the circuit to the proof
+	proof.AddCircuit(circuit)
+	// Return the proof
+	return proof
 }
-
-// Define declares the circuit's constraints
-func (circuit *Circuit) Define(api frontend.API) error {
-    // hash function
-    mimc, err := mimc.NewMiMC(api.Curve())
-
-    // specify constraints
-    // mimc(preImage) == hash
-    api.AssertIsEqual(circuit.Hash, mimc.Hash(cs, circuit.PreImage))
-
-    return nil
-}
-
-var mimcCircuit Circuit
-r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &mimcCircuit)
-
-assignment := &Circuit{
-    Hash: b.Hash,
-    PreImage: 35,
-}
-witness, _ := frontend.NewWitness(assignment, ecc.BN254)
-publicWitness, _ := witness.Public()
-pk, vk, err := groth16.Setup(r1cs)
-proof, err := groth16.Prove(r1cs, pk, witness)
-err := groth16.Verify(proof, vk, publicWitness)
