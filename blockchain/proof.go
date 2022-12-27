@@ -10,6 +10,7 @@ import (
 	"math/big"
 )
 
+// keeping that reasonably low to keep the service reliable
 const Difficulty = 6
 
 type ProofOfWork struct {
@@ -19,7 +20,7 @@ type ProofOfWork struct {
 
 func NewProof(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
-	target.Lsh(target, uint(256-Difficulty))
+	target.Lsh(target, uint(256-Difficulty)) //left shift
 
 	pow := &ProofOfWork{b, target}
 
@@ -36,6 +37,7 @@ func (pow *ProofOfWork) InitData(nonce int) []byte {
 		},
 		[]byte{},
 	)
+
 	return data
 }
 
@@ -63,6 +65,8 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	return nonce, hash[:]
 }
 
+//quick validation, slow block signing and generation to prevent tampering
+
 func (pow *ProofOfWork) Validate() bool {
 	var intHash big.Int
 
@@ -71,6 +75,7 @@ func (pow *ProofOfWork) Validate() bool {
 	hash := sha256.Sum256(data)
 	intHash.SetBytes(hash[:])
 
+	//run int hash computation on proof of work target
 	return intHash.Cmp(pow.Target) == -1
 }
 
